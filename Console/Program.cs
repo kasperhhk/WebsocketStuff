@@ -20,9 +20,20 @@ Console.WriteLine("start ACK'ed");
 
 for (var i = 0; i < 5; i++)
 {
+    if (i == 3)
+    {
+        Console.WriteLine("temporary suspend");
+        await ws.SendStringAsync("status suspended", CancellationToken.None);
+
+        await Task.Delay(3000);
+        
+        Console.WriteLine("resume charging");
+        await ws.SendStringAsync("status charging", CancellationToken.None);
+    }
+    
     await Task.Delay(1000);
     Console.WriteLine("sending meter value");
-    await ws.SendStringAsync("charging", CancellationToken.None);
+    await ws.SendStringAsync($"charging {(i+1) * 1000}", CancellationToken.None);
 }
 
 Console.WriteLine("sending stop");

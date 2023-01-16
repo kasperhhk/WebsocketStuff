@@ -34,12 +34,12 @@ public class Handler
 
     private void HandleCharging(string message)
     {
-        Console.WriteLine($"{_identifier}: Charging update (meter value)");
+        Console.WriteLine($"{_identifier}: Charging update - {message}");
     }
 
     private void HandleStatus(string message)
     {
-        Console.WriteLine($"{_identifier}: Status change");
+        Console.WriteLine($"{_identifier}: Status change - {message}");
     }
 
     private void HandleStop(string message)
