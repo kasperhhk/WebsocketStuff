@@ -1,13 +1,26 @@
 ﻿using System.Net.WebSockets;
+using System.Text.Json;
 using Shared;
 
 using ClientWebSocket ws = new ClientWebSocket();
-await ws.ConnectAsync(new Uri(args[0]), CancellationToken.None);
+await ws.ConnectAsync(new Uri("ws://localhost:5110/ws/PEWPEW"), CancellationToken.None);
+
+var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+
+var transactionStart = new DateTimeOffset(2023, 1, 17, 15, 0, 0, TimeSpan.Zero).ToUnixTimeMilliseconds();
+var transactionId = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - transactionStart;
+var meter = Random.Shared.NextInt64(0, 12345);
 
 var buffer = new byte[1024];
 
-Console.WriteLine("sending start");
-await ws.SendStringAsync("start", CancellationToken.None);
+var startPayload = JsonSerializer.Serialize(new
+{
+    TransactionId = transactionId,
+    Timestamp = DateTimeOffset.UtcNow,
+    MeterStart = meter
+}, jsonOptions);
+Console.WriteLine($"sending start: {startPayload}");
+await ws.SendStringAsync($"start {startPayload}", CancellationToken.None);
 
 var startResult = await ws.ReceiveStringAsync(buffer, CancellationToken.None);
 if (startResult != "start ack")
@@ -22,22 +35,51 @@ for (var i = 0; i < 5; i++)
 {
     if (i == 3)
     {
-        Console.WriteLine("temporary suspend");
-        await ws.SendStringAsync("status suspended", CancellationToken.None);
+        var suspendPayload = JsonSerializer.Serialize(new
+        {
+            TransactionId = transactionId,
+            Timestamp = DateTimeOffset.UtcNow,
+            Status = ChargingStationStatus.Suspended.ToString()
+        }, jsonOptions);
+        Console.WriteLine($"temporary suspend: {suspendPayload}");
+        await ws.SendStringAsync($"status {suspendPayload}", CancellationToken.None);
 
         await Task.Delay(3000);
         
-        Console.WriteLine("resume charging");
-        await ws.SendStringAsync("status charging", CancellationToken.None);
+        var resumePaylod = JsonSerializer.Serialize(new
+        {
+            TransactionId = transactionId,
+            Timestamp = DateTimeOffset.UtcNow,
+            Status = ChargingStationStatus.Charging.ToString()
+        }, jsonOptions);
+        Console.WriteLine($"resume charging: {resumePaylod}");
+        await ws.SendStringAsync($"status {resumePaylod}", CancellationToken.None);
     }
     
     await Task.Delay(1000);
-    Console.WriteLine("sending meter value");
-    await ws.SendStringAsync($"charging {(i+1) * 1000}", CancellationToken.None);
+    meter += Random.Shared.NextInt64(500, 1200);
+    
+    var chargingPayload = JsonSerializer.Serialize(new
+    {
+        TransactionId = transactionId,
+        Timestamp = DateTimeOffset.UtcNow,
+        MeterValue = meter
+    }, jsonOptions);
+    Console.WriteLine($"sending meter value: {chargingPayload}");
+    await ws.SendStringAsync($"charging {chargingPayload}", CancellationToken.None);
 }
 
-Console.WriteLine("sending stop");
-await ws.SendStringAsync("stop", CancellationToken.None);
+await Task.Delay(500);
+meter += Random.Shared.NextInt64(100, 500);
+
+var stopPayload = JsonSerializer.Serialize(new
+{
+    TransactionId = transactionId,
+    Timestamp = DateTimeOffset.UtcNow,
+    MeterStop = meter
+}, jsonOptions);
+Console.WriteLine($"sending stop: {stopPayload}");
+await ws.SendStringAsync($"stop {stopPayload}", CancellationToken.None);
 
 var stopResult = await ws.ReceiveStringAsync(buffer, CancellationToken.None);
 if (stopResult == "stop ack")

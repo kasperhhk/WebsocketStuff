@@ -28,7 +28,7 @@ public class Handler
 
     private void HandleStart(string message)
     {
-        Console.WriteLine($"{_identifier}: Start transaction!");
+        Console.WriteLine($"{_identifier}: Start transaction! - {message}");
         _ws.SendStringAsync("start ack", CancellationToken.None);
     }
 
@@ -44,7 +44,7 @@ public class Handler
 
     private void HandleStop(string message)
     {
-        Console.WriteLine($"{_identifier}: Stop transaction!");
+        Console.WriteLine($"{_identifier}: Stop transaction! - {message}");
         _ws.SendStringAsync("stop ack", CancellationToken.None);
     }
 }
